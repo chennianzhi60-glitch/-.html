@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>超市采购工作台</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6fa; color: #2c3e50; padding-bottom: 70px; }
+        .header { background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 1.2em; font-weight: bold; }
+        .tab-bar { display: flex; background: #34495e; position: sticky; top: 0; z-index: 100; }
+        .tab-bar button { flex: 1; background: none; border: none; color: #bdc3c7; padding: 12px 5px; font-size: 0.9em; cursor: pointer; }
+        .tab-bar button.active { background: #2c3e50; color: white; border-bottom: 3px solid #e67e22; }
+        .tab-content { display: none; padding: 15px; }
+        .tab-content.active { display: block; }
+        .card { background: white; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 1.1em; margin-bottom: 10px; color: #e67e22; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th, td { padding: 8px 5px; text-align: left; border-bottom: 1px solid #ecf0f1; }
+        th { background: #f8f9fa; font-weight: bold; }
+        .btn { background: #e67e22; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; }
+        .btn-danger { background: #e74c3c; padding: 5px 8px; font-size: 0.8em; }
+        input, select { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; font-size: 0.9em; }
+        .highlight { background: #fef9e7; }
+        .future { background: #fadbd8; font-weight: bold; }
+        .badge { display: inline-block; background: #e67e22; color: white; border-radius: 10px; padding: 2px 8px; font-size: 0.8em; margin-left: 5px; }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .form-row > * { flex: 1 1 45%; }
+        .delete-btn { background: #e74c3c; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 0.8em; }
+        .small-note { font-size: 0.8em; color: #7f8c8d; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">🏪 超市采购工作台</div>
+
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="home">首页</button>
+        <button class="tab-btn" data-tab="suppliers">供应商</button>
+        <button class="tab-btn" data-tab="calendar">促销日历</button>
+        <button class="tab-btn" data-tab="purchase">采购记录</button>
+        <button class="tab-btn" data-tab="settings">设置</button>
+    </div>
+
+    <!-- 首页 -->
+    <div id="home" class="tab-content active">
+        <div class="card">
+            <h2>📅 今日</h2>
+            <p id="todayDate"></p>
+            <p>供应商总数：<span id="supplierCount">0</span></p>
+        </div>
+        <div class="card">
+            <h2>⏰ 未来 <span id="remindDaysLabel">7</span> 天促销提醒</h2>
+            <div id="upcomingPromos"></div>
+        </div>
+    </div>
+
+    <!-- 供应商清单 -->
+    <div id="suppliers" class="tab-content">
+        <div class="card">
+            <h2>📋 所有供应商</h2>
+            <button class="btn" onclick="showAddSupplierForm()">➕ 添加供应商</button>
+            <div id="addSupplierForm" style="display:none; margin-top:10px;">
+                <input type="text" id="supName" placeholder="供应商名称">
+                <input type="text" id="supCategory" placeholder="商品品类">
+                <input type="text" id="supAddress" placeholder="地址">
+                <input type="text" id="supPhone" placeholder="电话/WhatsApp">
+                <input type="text" id="supWebsite" placeholder="网站">
+                <input type="text" id="supNote" placeholder="备注（低价条件等）">
+                <button class="btn" onclick="addSupplier()">保存</button>
+                <button class="btn" style="background:#95a5a6;" onclick="hideAddSupplierForm()">取消</button>
+            </div>
+            <div style="overflow-x:auto; margin-top:10px;">
+                <table id="supplierTable">
+                    <thead><tr><th>名称</th><th>品类</th><th>地址</th><th>电话</th><th>备注</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 促销日历 -->
+    <div id="calendar" class="tab-content">
+        <div class="card">
+            <h2>📅 促销日历</h2>
+            <button class="btn" onclick="showAddPromoForm()">➕ 添加促销</button>
+            <div id="addPromoForm" style="display:none; margin-top:10px;">
+                <input type="text" id="promoName" placeholder="促销名称">
+                <input type="date" id="promoDate">
+                <input type="text" id="promoCategory" placeholder="涉及品类">
+                <input type="text" id="promoNote" placeholder="备注">
+                <button class="btn" onclick="addPromo()">保存</button>
+                <button class="btn" style="background:#95a5a6;" onclick="hideAddPromoForm()">取消</button>
+            </div>
+            <div style="overflow-x:auto; margin-top:10px;">
+                <table id="promoTable">
+                    <thead><tr><th>名称</th><th>日期</th><th>品类</th><th>备注</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 采购记录 -->
+    <div id="purchase" class="tab-content">
+        <div class="card">
+            <h2>🛒 采购记录</h2>
+            <div class="form-row">
+                <input type="date" id="purchaseDate">
+                <input type="text" id="purchaseSupplier" placeholder="供应商">
+                <input type="text" id="purchaseItem" placeholder="商品">
+                <input type="number" id="purchaseQty" placeholder="数量" step="any">
+                <input type="number" id="purchasePrice" placeholder="单价" step="any">
+                <button class="btn" onclick="addPurchase()">添加</button>
+            </div>
+            <div style="overflow-x:auto; margin-top:10px;">
+                <table id="purchaseTable">
+                    <thead><tr><th>日期</th><th>供应商</th><th>商品</th><th>数量</th><th>单价</th><th>总价</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置 -->
+    <div id="settings" class="tab-content">
+        <div class="card">
+            <h2>⏰ 提醒设置</h2>
+            <label>提前提醒天数：</label>
+            <input type="number" id="remindDays" value="7" min="1" max="60">
+            <button class="btn" onclick="saveSettings()">保存</button>
+            <p class="small-note">首页的促销提醒将显示未来 N 天内的活动</p>
+        </div>
+        <div class="card">
+            <h2>📦 数据管理</h2>
+            <button class="btn" onclick="exportData()">导出数据（复制到剪贴板）</button>
+            <button class="btn" style="background:#e74c3c;" onclick="clearAllData()">清空所有数据</button>
+        </div>
+    </div>
+
+    <script>
+        // ---------- 初始数据 ----------
+        const defaultSuppliers = [
+            {name:"Maxiconsumo", category:"粮油饮料清洁", address:"Lanús有分店", phone:"0800-666-6294", website:"www.maxiconsumo.com", note:"现金折扣"},
+            {name:"Vital", category:"粮油零食饮料", address:"Lanús有分店", phone:"0800-999-8482", website:"www.vital.com.ar", note:"第二件半价"},
+            {name:"Diarco", category:"粮油纸品乳制品", address:"Lanús有分店", phone:"0810-333-4342", website:"www.diarco.com.ar", note:"整箱便宜"},
+            {name:"Mercado Central", category:"蔬菜水果肉类", address:"Tapiales", phone:"011-4480-5500", website:"www.mercadocentral.gob.ar", note:"凌晨最便宜"},
+            {name:"Coca-Cola Femsa", category:"饮料", address:"Av. Juan B. Justo 7300", phone:"0810-333-2653", website:"www.cocacolafemsa.com", note:"送冰柜"},
+            {name:"Quilmes", category:"啤酒矿泉水", address:"Av. 12 de Octubre 1000", phone:"0800-333-7845", website:"www.cerveceriaymalteriaquilmes.com.ar", note:"堆头费"},
+            {name:"Arcor", category:"糖果巧克力", address:"Arroyito Córdoba", phone:"0800-777-2726", website:"www.arcor.com", note:"节日特供"},
+            {name:"La Serenísima", category:"乳制品", address:"Gral. Rodríguez", phone:"0800-222-7373", website:"www.laserenisima.com.ar", note:"量大价低"},
+            {name:"Makro", category:"冷冻食品大包装", address:"Av. Gral. Paz 13400", phone:"0810-222-6257", website:"www.makro.com.ar", note:"批发日折扣"},
+            {name:"华人进口商", category:"中国食品", address:"中国城Belgrano", phone:"现场问WhatsApp", website:"", note:"联合采购"},
+            {name:"Once批发区", category:"礼品玩具派对", address:"Av. Corrientes 2400-2800", phone:"现场拿名片", website:"", note:"节前促销"},
+            {name:"Avellaneda批发区", category:"袜子内衣", address:"Av. Mitre y Perón", phone:"现场拿名片", website:"", note:"换季清仓"},
+            {name:"当地烟草分销商", category:"香烟", address:"Google Maps搜", phone:"无统一电话", website:"", note:"调价前囤货"}
+        ];
+
+        const defaultPromos = [
+            {name:"三王节", date:"2026-01-06", category:"玩具糖果", note:"节后清仓"},
+            {name:"情人节", date:"2026-02-14", category:"礼品巧克力", note:"小礼品"},
+            {name:"中国春节", date:"2026-02-17", category:"中国食品", note:"联合采购"},
+            {name:"开学季", date:"2026-03-01", category:"零食饮料文具", note:"学生消费"},
+            {name:"复活节", date:"2026-04-05", category:"巧克力甜食", note:"厂家特供"},
+            {name:"劳动节", date:"2026-05-01", category:"饮料零食", note:"发薪日叠加"},
+            {name:"国庆节", date:"2026-05-25", category:"啤酒肉类烧烤", note:"烧烤套餐"},
+            {name:"父亲节", date:"2026-06-21", category:"酒类工具", note:"男士用品"},
+            {name:"朋友节", date:"2026-07-20", category:"啤酒零食披萨", note:"聚会主题"},
+            {name:"儿童节", date:"2026-08-16", category:"玩具糖果", note:"最大促销"},
+            {name:"母亲节", date:"2026-10-18", category:"甜品葡萄酒", note:"礼盒装"},
+            {name:"黑色星期五", date:"2026-11-27", category:"全品类", note:"线上参与"},
+            {name:"圣诞节", date:"2026-12-25", category:"甜面包礼篮", note:"最大促销"},
+            {name:"元旦", date:"2027-01-01", category:"香槟零食", note:"跨年聚会"}
+        ];
+
+        // ---------- 本地存储操作 ----------
+        function getData(key, defaultValue) {
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                try { return JSON.parse(stored); } catch(e) { return defaultValue; }
+            }
+            return defaultValue;
+        }
+        function setData(key, value) {
+            localStorage.setItem(key, JSON.stringify(value));
+        }
+
+        let suppliers = getData('suppliers', defaultSuppliers);
+        let promos = getData('promos', defaultPromos);
+        let purchases = getData('purchases', []);
+        let remindDays = getData('remindDays', 7);
+
+        // ---------- 页面切换 ----------
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.getAttribute('data-tab');
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                tabContents.forEach(c => c.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+                if (tabName === 'home') renderHome();
+                if (tabName === 'suppliers') renderSuppliers();
+                if (tabName === 'calendar') renderPromos();
+                if (tabName === 'purchase') renderPurchases();
+                if (tabName === 'settings') renderSettings();
+            });
+        });
+
+        // ---------- 首页 ----------
+        function renderHome() {
+            const today = new Date();
+            document.getElementById('todayDate').textContent = today.toLocaleDateString('zh-CN', {year:'numeric', month:'long', day:'numeric', weekday:'long'});
+            document.getElementById('supplierCount').textContent = suppliers.length;
+            document.getElementById('remindDaysLabel').textContent = remindDays;
+            const upcoming = getUpcomingPromos(remindDays);
+            const container = document.getElementById('upcomingPromos');
+            if (upcoming.length === 0) {
+                container.innerHTML = '<p>未来 ' + remindDays + ' 天暂无促销</p>';
+            } else {
+                let html = '<table><tr><th>名称</th><th>日期</th><th>品类</th><th>备注</th></tr>';
+                upcoming.forEach(p => {
+                    html += `<tr class="future"><td>${p.name}</td><td>${p.date}</td><td>${p.category}</td><td>${p.note}</td></tr>`;
+                });
+                html += '</table>';
+                container.innerHTML = html;
+            }
+        }
+
+        function getUpcomingPromos(days) {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const end = new Date(today);
+            end.setDate(end.getDate() + days);
+            return promos.filter(p => {
+                const pDate = new Date(p.date + 'T00:00:00');
+                return pDate >= today && pDate <= end;
+            }).sort((a,b) => new Date(a.date) - new Date(b.date));
+        }
+
+        // ---------- 供应商 ----------
+        function renderSuppliers() {
+            const tbody = document.querySelector('#supplierTable tbody');
+            tbody.innerHTML = '';
+            suppliers.forEach((s, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>${s.name}</td><td>${s.category}</td><td>${s.address}</td><td>${s.phone}</td><td>${s.note}</td><td><button class="delete-btn" data-index="${index}">删除</button></td>`;
+            });
+            document.querySelectorAll('#supplierTable .delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = e.target.getAttribute('data-index');
+                    suppliers.splice(index, 1);
+                    setData('suppliers', suppliers);
+                    renderSuppliers();
+                    renderHome();
+                });
+            });
+        }
+
+        function showAddSupplierForm() {
+            document.getElementById('addSupplierForm').style.display = 'block';
+        }
+        function hideAddSupplierForm() {
+            document.getElementById('addSupplierForm').style.display = 'none';
+        }
+        function addSupplier() {
+            const name = document.getElementById('supName').value.trim();
+            if (!name) return alert('请输入供应商名称');
+            suppliers.push({
+                name: name,
+                category: document.getElementById('supCategory').value.trim(),
+                address: document.getElementById('supAddress').value.trim(),
+                phone: document.getElementById('supPhone').value.trim(),
+                website: document.getElementById('supWebsite').value.trim(),
+                note: document.getElementById('supNote').value.trim()
+            });
+            setData('suppliers', suppliers);
+            hideAddSupplierForm();
+            document.getElementById('supName').value = '';
+            document.getElementById('supCategory').value = '';
+            document.getElementById('supAddress').value = '';
+            document.getElementById('supPhone').value = '';
+            document.getElementById('supWebsite').value = '';
+            document.getElementById('supNote').value = '';
+            renderSuppliers();
+            renderHome();
+        }
+
+        // ---------- 促销日历 ----------
+        function renderPromos() {
+            const tbody = document.querySelector('#promoTable tbody');
+            tbody.innerHTML = '';
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() + remindDays);
+            promos.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach((p, index) => {
+                const pDate = new Date(p.date + 'T00:00:00');
+                let rowClass = '';
+                if (pDate >= today && pDate <= endDate) rowClass = 'future';
+                const row = tbody.insertRow();
+                row.className = rowClass;
+                row.innerHTML = `<td>${p.name}</td><td>${p.date}</td><td>${p.category}</td><td>${p.note}</td><td><button class="delete-btn" data-index="${index}">删除</button></td>`;
+                // 注意：因为排序后index不对应原数组，需要重新绑定实际索引
+                // 简单处理：通过名称找到原索引
+                row.querySelector('.delete-btn').addEventListener('click', (e) => {
+                    const name = p.name;
+                    const realIndex = promos.findIndex(x => x.name === name && x.date === p.date);
+                    if (realIndex > -1) {
+                        promos.splice(realIndex, 1);
+                        setData('promos', promos);
+                        renderPromos();
+                        renderHome();
+                    }
+                });
+            });
+        }
+
+        function showAddPromoForm() {
+            document.getElementById('addPromoForm').style.display = 'block';
+        }
+        function hideAddPromoForm() {
+            document.getElementById('addPromoForm').style.display = 'none';
+        }
+        function addPromo() {
+            const name = document.getElementById('promoName').value.trim();
+            const date = document.getElementById('promoDate').value;
+            if (!name || !date) return alert('请输入促销名称和日期');
+            promos.push({
+                name: name,
+                date: date,
+                category: document.getElementById('promoCategory').value.trim(),
+                note: document.getElementById('promoNote').value.trim()
+            });
+            setData('promos', promos);
+            hideAddPromoForm();
+            document.getElementById('promoName').value = '';
+            document.getElementById('promoDate').value = '';
+            document.getElementById('promoCategory').value = '';
+            document.getElementById('promoNote').value = '';
+            renderPromos();
+            renderHome();
+        }
+
+        // ---------- 采购记录 ----------
+        function renderPurchases() {
+            const tbody = document.querySelector('#purchaseTable tbody');
+            tbody.innerHTML = '';
+            purchases.forEach((p, index) => {
+                const total = (p.qty * p.price).toFixed(2);
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>${p.date}</td><td>${p.supplier}</td><td>${p.item}</td><td>${p.qty}</td><td>${p.price}</td><td>${total}</td><td><button class="delete-btn" data-index="${index}">删除</button></td>`;
+            });
+            document.querySelectorAll('#purchaseTable .delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = e.target.getAttribute('data-index');
+                    purchases.splice(index, 1);
+                    setData('purchases', purchases);
+                    renderPurchases();
+                });
+            });
+        }
+
+        function addPurchase() {
+            const date = document.getElementById('purchaseDate').value;
+            const supplier = document.getElementById('purchaseSupplier').value.trim();
+            const item = document.getElementById('purchaseItem').value.trim();
+            const qty = parseFloat(document.getElementById('purchaseQty').value);
+            const price = parseFloat(document.getElementById('purchasePrice').value);
+            if (!date || !supplier || !item || isNaN(qty) || isNaN(price)) return alert('请填写完整信息');
+            purchases.push({date, supplier, item, qty, price});
+            setData('purchases', purchases);
+            document.getElementById('purchaseSupplier').value = '';
+            document.getElementById('purchaseItem').value = '';
+            document.getElementById('purchaseQty').value = '';
+            document.getElementById('purchasePrice').value = '';
+            renderPurchases();
+        }
+
+        // ---------- 设置 ----------
+        function renderSettings() {
+            document.getElementById('remindDays').value = remindDays;
+        }
+        function saveSettings() {
+            const val = parseInt(document.getElementById('remindDays').value);
+            if (val > 0) {
+                remindDays = val;
+                setData('remindDays', remindDays);
+                alert('已保存，提醒天数：' + remindDays);
+                renderHome();
+            }
+        }
+
+        function exportData() {
+            const data = { suppliers, promos, purchases, remindDays };
+            const text = JSON.stringify(data, null, 2);
+            // 复制到剪贴板
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => alert('数据已复制到剪贴板，可粘贴到其他地方备份')).catch(() => {
+                    prompt('复制失败，请手动复制：', text);
+                });
+            } else {
+                prompt('请手动复制：', text);
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('确定清空所有数据？此操作不可恢复！')) {
+                localStorage.clear();
+                suppliers = [...defaultSuppliers];
+                promos = [...defaultPromos];
+                purchases = [];
+                remindDays = 7;
+                setData('suppliers', suppliers);
+                setData('promos', promos);
+                setData('purchases', purchases);
+                setData('remindDays', remindDays);
+                renderAll();
+                alert('已清空并恢复默认数据');
+            }
+        }
+
+        function renderAll() {
+            renderHome();
+            renderSuppliers();
+            renderPromos();
+            renderPurchases();
+            renderSettings();
+        }
+
+        // 初始渲染
+        renderAll();
+    </script>
+</body>
+</html>
